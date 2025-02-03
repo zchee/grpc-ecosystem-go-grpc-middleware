@@ -9,11 +9,22 @@ package protovalidate
 import (
 	"slices"
 
+	protovalidate "github.com/bufbuild/protovalidate-go"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type options struct {
 	ignoreMessages []protoreflect.FullName
+	validator      protovalidate.Validator
+}
+
+// Validate implements [protovalidate.Validator].
+func (o *options) Validate(msg proto.Message) error {
+	if o.validator != nil {
+		return o.validator.Validate(msg)
+	}
+	return protovalidate.Validate(msg)
 }
 
 // An Option lets you add options to protovalidate interceptors using With* funcs.
@@ -47,4 +58,11 @@ func (o *options) shouldIgnoreMessage(fqn protoreflect.FullName) bool {
 	// Names are sorted in WithIgnoreMessages, so we can use binary search.
 	_, found := slices.BinarySearch(o.ignoreMessages, fqn)
 	return found
+}
+
+// WithValidator sets the validator that protovalidate-go custom validator.
+func WithValidator(validator protovalidate.Validator) Option {
+	return func(o *options) {
+		o.validator = validator
+	}
 }
